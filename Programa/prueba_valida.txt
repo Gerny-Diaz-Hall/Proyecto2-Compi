@@ -1,0 +1,16 @@
+| programa valido
+val int g Ͱ -5 »
+val float arr ʃ:3:ʅ Ͱ ¿: 1.5, -2.5, 3.0 :? »
+int suma є: int a, int b :э ¿: return a + b * 2 ^ 3 % 4 // 5 - 1 » :?
+boolean esPar є: int n :э ¿: return є:ʃ:n % 2:ʅ == ʃ:0:ʅ:э λ є:true:э » :?
+void principal є::э ¿:
+  val string s Ͱ "hola mundo" »
+  val char c Ͱ 'x' »
+  val int i Ͱ 0 »
+  i++ »
+  for є: i Ͱ 0 » ʃ:i:ʅ <= ʃ:10:ʅ » i++ :э ¿: write є:i:э » :?
+  if є: є:ʃ:i:ʅ >= ʃ:3:ʅ:э λ є:Σ є:esPar є:i:э:э:э :э ¿: write є:s:э » :?
+  elif є: ʃ:i:ʅ != ʃ:1:ʅ :э ¿: break » :?
+  else ¿: read є:c:э » :?
+  arr ʃ:1:ʅ Ͱ suma є: i, arr ʃ:0:ʅ :э »
+:?

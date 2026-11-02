@@ -1,0 +1,20 @@
+| Prueba del scanner: comentario de una linea
+val int g Ͱ -5 »
+val float arr ʃ:3:ʅ Ͱ ¿: 1.5, -2.5, 3.0 :? »
+¡ comentario
+  de varias lineas !
+int suma є: int a, int b :э ¿: return a + b * 2 ^ 3 % 4 // 5 - 1 » :?
+void principal є::э ¿:
+  val string s Ͱ "hola mundo" »
+  val char c Ͱ 'x' »
+  i++ »   j-- »
+  if є: є:ʃ:i:ʅ >= ʃ:3:ʅ:э λ є:Σ є:true:э:э :э ¿: write є:s:э » :?
+  elif є: ʃ:i:ʅ != ʃ:1:ʅ :э ¿: break » :?
+  else ¿: read є:c:э » :?
+  for є: i Ͱ 0 » ʃ:i:ʅ <= ʃ:10:ʅ » i++ :э ¿: write є:i:э » :?
+  val int x Ͱ 5 @ »
+  val string mal Ͱ "sin cerrar »
+  val char dos Ͱ 'ab' »
+  y Ͱ 3 = 4 »
+:?
+¡ comentario que nunca se cierra

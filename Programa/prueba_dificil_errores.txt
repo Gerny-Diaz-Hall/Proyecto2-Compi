@@ -1,0 +1,41 @@
+| ===== PRUEBA DIFICIL CON ERRORES: cada linea marcada con ERROR debe reportarse =====
+val float pi Ͱ 3.14 »
+val int datos ʃ:3:ʅ Ͱ ¿: 1, 2, 3 :? »
+val string nombres ʃ:2:ʅ »                 | ERROR sintactico: no hay arreglos de string
+
+int doble є: int n :э ¿:
+    return n * 2 »
+:?
+
+void principal є: :э ¿:
+    val int a Ͱ 10 »
+    val float f Ͱ 2.20 »
+    val int b Ͱ -a »                        | ERROR sintactico: negativo solo para literales
+    val float g Ͱ 2. »                      | ERROR lexico: flotante incompleto
+    val float h Ͱ .5 »                      | ERROR lexico: flotante sin parte entera
+    val float k Ͱ 3.14.15 »                 | ERROR lexico + sintactico
+    val int c Ͱ 5--3 »                      | ERROR sintactico: -- se toma como decremento
+    val int d Ͱ 5 - -3 »                    | correcto: resta de un negativo
+    val int e Ͱ a+++b »                     | correcto: se lee como a++ + b
+    val int z Ͱ 2abc »                      | ERROR sintactico: identificador no puede iniciar con digito
+    val boolean r Ͱ a > 3 »                 | ERROR sintactico: relacional sin ʃ: :ʅ
+    val boolean s Ͱ є: true :э λ a »        | ERROR sintactico: operando logico sin є: :э
+    val boolean t Ͱ Σ a »                   | ERROR sintactico: negacion sin є: :э
+    val boolean u Ͱ ʃ:a:ʅ < ʃ:b:ʅ < ʃ:c:ʅ »  | ERROR sintactico: relacionales encadenados
+    val char ch Ͱ 'ab' »                    | ERROR lexico: char con 2 caracteres
+    val float coma Ͱ 2,20 »                 | ERROR sintactico: coma en vez de punto
+    write є: a + 1 :э »                     | ERROR sintactico: write solo literales o variables
+    read є: 5 :э »                          | ERROR sintactico: read necesita una variable
+    a Ͱ b Ͱ 3 »                             | ERROR sintactico: asignacion encadenada
+    a Ͱ 5++ »                               | ERROR sintactico: ++ sobre un literal
+    datos ʃ: a % 3 :ʅ Ͱ doble є: datos ʃ:0:ʅ :э ^ 2 »   | correcto
+    a Ͱ 7 @ 2 »                             | ERROR lexico: simbolo desconocido
+    if є: 5 :э ¿:                           | ERROR sintactico: condicion no booleana
+        write є: "nunca" :э »
+    :?
+    while є: ʃ: a :ʅ < ʃ: 10 :ʅ :э ¿:
+        a++ »
+        break »
+    :?
+    write є: "fin" :э »                     | correcto: el parser llego hasta aqui
+:?
