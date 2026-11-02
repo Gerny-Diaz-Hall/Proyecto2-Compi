@@ -1,0 +1,63 @@
+| ===== PRUEBA DIFICIL: todo esto DEBE ser aceptado =====
+¡ comentario multilinea con simbolos raros adentro:
+  » Ͱ ¿: :? ʃ: :ʅ є: :э | λ θ Σ "cadena" 'c' 2.20
+!
+val float pi Ͱ 3.14159 »
+val float cero Ͱ 0.0 »
+val float dosVeinte Ͱ 2.20 »
+val int negGlobal Ͱ -007 »
+val int datos ʃ:4:ʅ Ͱ ¿: -1, 2, -3, 4 :? »
+
+float promedio є: float a, float b :э ¿:
+    return є: a + b :э / 2.0 »
+:?
+
+char inicial є: string s :э ¿:
+    return 'z' »
+:?
+
+boolean rango є: int x, int lo, int hi :э ¿:
+    return є: ʃ: x :ʅ >= ʃ: lo :ʅ :э λ є: ʃ: x :ʅ <= ʃ: hi :ʅ :э »
+:?
+
+void principal є: :э ¿:
+    | resta binaria pegada a letras y numeros
+    val int a Ͱ 10-3 »
+    val int b Ͱ a-1 »
+    val int c Ͱ a - -5 »
+    val float f Ͱ 2.20 * -1.5 »
+    | potencia es asociativa por la derecha: 2^(3^2)
+    val int p Ͱ 2 ^ 3 ^ 2 »
+    | mezcla de todos los niveles de precedencia
+    val int m Ͱ a + b * c % 4 // 2 - p ^ 2 »
+    | parentesis anidados profundos
+    val float g Ͱ є: є: є: f + 1.0 :э * 2.0 :э - є: pi / 2.20 :э :э »
+    | indices con expresiones y arreglos dentro de indices
+    datos ʃ: a % 4 :ʅ Ͱ datos ʃ: datos ʃ: 0 :ʅ + 1 :ʅ * 2 »
+    | llamadas anidadas como argumentos
+    val float r Ͱ promedio є: promedio є: f, pi :э, datos ʃ:1:ʅ :э »
+    | ++ y -- postfijos dentro de expresiones
+    a Ͱ a++ + b-- »
+    a++ »
+    | relacional con arreglo y llamada adentro de ʃ: :ʅ
+    val boolean ok Ͱ ʃ: datos ʃ:2:ʅ + 1 :ʅ != ʃ: promedio є: 1.0, 2.0 :э :ʅ »
+    val boolean igualChar Ͱ ʃ: 'a' :ʅ == ʃ: inicial є: "hola" :э :ʅ »
+    | logica anidada con negacion
+    val boolean l Ͱ є: Σ є: ok :э :э θ є: є: true :э λ є: l :э :э »
+    val string s Ͱ "texto con | y ¡ y » adentro" »
+    while є: rango є: a, 0, 100 :э :э ¿:
+        if є: ʃ: a % 2 :ʅ == ʃ: 0 :ʅ :э ¿:
+            write є: a :э »
+        :?
+        elif є: Σ є: ok :э :э ¿:
+            break »
+        :?
+        else ¿:
+            write є: -2.20 :э »
+        :?
+        a Ͱ a + 1 »
+    :?
+    for є: val int i Ͱ 0 » ʃ: i :ʅ < ʃ: 4 :ʅ » i++ :э ¿:
+        read є: datos ʃ: i :ʅ :э »
+    :?
+:?
