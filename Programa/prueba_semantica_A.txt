@@ -1,0 +1,68 @@
+| ===== PRUEBA SEMANTICA - PERSONA A: declaraciones, ambitos, funciones, llamadas, return, break =====
+| Cada linea con error dice cual se espera. Las demas NO deben dar error.
+val int g Ͱ 5 »
+val float arr ʃ:3:ʅ »
+val int g »                                   | ERROR: 'g' ya fue declarado
+val int vacio ʃ:0:ʅ »                         | ERROR: tamano debe ser mayor que 0
+val int muchos ʃ:2:ʅ Ͱ ¿: 1, 2, 3 :? »        | ERROR: tamano 2 pero 3 valores
+
+int suma є: int a, int b :э ¿:
+    return a »
+:?
+
+int dupParam є: int x, float x :э ¿:          | ERROR: 'x' ya fue declarado (parametro repetido)
+    return x »
+:?
+
+int sinReturn є: int n :э ¿:                  | ERROR: 'sinReturn' debe retornar un valor
+    val int local »
+:?
+
+int retVacio є: :э ¿:
+    return »                                  | ERROR: debe retornar un valor de tipo int
+:?
+
+float retMalo є: int n :э ¿:
+    return n »                                | ERROR: se esperaba float pero se encontro int
+:?
+
+int recursiva є: int n :э ¿:
+    return recursiva є: n :э »
+:?
+
+void principal є: :э ¿:
+    val int g »                               | ERROR: 'g' ya existe como global
+    val int y Ͱ noExiste »                    | ERROR: 'noExiste' no ha sido declarado
+    val int z Ͱ z »                           | ERROR: 'z' no ha sido declarado (en su propio valor)
+    val int i »
+    val float f »
+    if є: true :э ¿:
+        val int w »
+    :?
+    else ¿:
+        val int w »
+    :?
+    i Ͱ suma є: i, i :э »
+    i Ͱ suma є: i :э »                        | ERROR: suma espera 2 argumentos pero recibio 1
+    i Ͱ suma є: i, f :э »                     | ERROR: argumento 2 debe ser int pero es float
+    i Ͱ otra є: :э »                          | ERROR: la funcion 'otra' no ha sido declarada
+    i Ͱ g є: :э »                             | ERROR: 'g' no es una funcion
+    i Ͱ suma »                                | ERROR: 'suma' es una funcion
+    i Ͱ arr ʃ: f :ʅ »                         | ERROR: el indice debe ser int
+    i Ͱ i ʃ: 0 :ʅ »                           | ERROR: 'i' no es un arreglo
+    while є: true :э ¿:
+        break »
+    :?
+    for є: val int k Ͱ 0 » ʃ: k :ʅ < ʃ: 3 :ʅ » k++ :э ¿:
+        break »
+    :?
+    for є: val int k Ͱ 0 » ʃ: k :ʅ < ʃ: 3 :ʅ » k++ :э ¿:
+        i Ͱ k »
+    :?
+    break »                                   | ERROR: break fuera de un ciclo
+    return i »                                | ERROR: principal no puede retornar un valor
+:?
+
+void principal є: :э ¿:                       | ERROR: ya existe un principal
+    val int otra »
+:?

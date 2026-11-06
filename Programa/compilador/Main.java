@@ -29,7 +29,7 @@ public class Main {
         new File(salida).mkdirs();
 
         System.out.println("==================================================");
-        System.out.println("            Compilador Proyecto 01                ");
+        System.out.println("            Compilador Proyecto 02                ");
         System.out.println("==================================================");
         System.out.println("Analizando: " + archivoFuente);
 
@@ -83,15 +83,32 @@ public class Main {
             });
             System.out.println("  - errores_sintacticos.txt");
 
+            // ==========================================================
+            // analizador semantico (se hizo durante el parse, con las acciones del .cup)
+            // ==========================================================
+            TablaSemantica tablaSemantica = sintactico.tabla;
+            tablaSemantica.verificarPrincipal();     // debe haber al menos un principal
+            List<String> erroresSemanticos = tablaSemantica.getErrores();
+            for (String e : erroresSemanticos) System.out.println(e);
+            escribir(salida + "/errores_semanticos.txt", pw -> {
+                if (erroresSemanticos.isEmpty()) pw.println("Sin errores semanticos.");
+                for (String e : erroresSemanticos) pw.println(e);
+            });
+            escribir(salida + "/tabla_simbolos_semantica.txt", tablaSemantica::escribirTabla);
+            System.out.println("  - errores_semanticos.txt");
+            System.out.println("  - tabla_simbolos_semantica.txt");
+
             // ========================================================================
             // dar el resultado de la evaluacion del codigo que se le dio al analizador
+            // (es valido solo si no hay errores lexicos, sintacticos ni semanticos)
             // ========================================================================
-            boolean valido = erroresLexicos.isEmpty() && erroresSintacticos.isEmpty();
+            boolean valido = erroresLexicos.isEmpty() && erroresSintacticos.isEmpty() && erroresSemanticos.isEmpty();
             System.out.println("\n==================================================");
             System.out.println(valido
-                ? " Resultado: se puede generar por la gramatica"
-                : " Resultado: no puede ser generado por los errores("
-                  + erroresLexicos.size() + " lexicos, " + erroresSintacticos.size() + " sintacticos)");
+                ? " Resultado: el programa es valido"
+                : " Resultado: el programa NO es valido ("
+                  + erroresLexicos.size() + " lexicos, " + erroresSintacticos.size() + " sintacticos, "
+                  + erroresSemanticos.size() + " semanticos)");
             System.out.println("==================================================");
 
         } catch (Exception e) {
