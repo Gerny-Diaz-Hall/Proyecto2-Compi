@@ -1,0 +1,57 @@
+| ===== PRUEBA SEMANTICA - PERSONA B (ERRORES): tipos de expresiones, asignaciones y control =====
+| Cada linea con error dice cual se espera. Las demas NO deben dar error.
+| Como hay errores, NO se debe generar codigo_intermedio.txt
+val int gi Ͱ 1.5 »                                | ERROR: float a variable int
+val float gf Ͱ 3 »                                | ERROR: int a variable float (tipado fuerte)
+val int arr ʃ:2:ʅ Ͱ ¿: 1, 2.5 :? »                | ERROR: valor 2 del arreglo debe ser int
+
+void principal є: :э ¿:
+    val int i Ͱ 1 »
+    val float f Ͱ 1.0 »
+    val boolean b Ͱ true »
+    val char c Ͱ 'a' »
+    val string s Ͱ "hola" »
+
+    | aritmeticas
+    i Ͱ i + f »                                   | ERROR: no se pueden mezclar int y float
+    i Ͱ b + 1 »                                   | ERROR: + solo acepta int o float
+    f Ͱ f // 2.0 »                                | ERROR: // solo acepta int
+    f Ͱ f % 2.0 »                                 | ERROR: % solo acepta int
+    i Ͱ 2 ^ -1 »                                  | ERROR: exponente negativo
+    i Ͱ c * 2 »                                   | ERROR: * solo acepta int o float
+    i Ͱ є: i + f :э * 2 »                         | ERROR: mezcla (solo un error, sin cascada)
+
+    | relacionales
+    b Ͱ ʃ: i :ʅ < ʃ: f :ʅ »                       | ERROR: comparar int con float
+    b Ͱ ʃ: b :ʅ > ʃ: true :ʅ »                    | ERROR: > solo compara int o float
+    b Ͱ ʃ: c :ʅ == ʃ: 'b' :ʅ »
+    b Ͱ ʃ: c :ʅ == ʃ: 1 :ʅ »                      | ERROR: tipos distintos (char == int)
+
+    | logicas
+    b Ͱ є: i :э λ є: b :э »                       | ERROR: λ solo acepta boolean
+    b Ͱ Σ є: i :э »                               | ERROR: la negacion solo acepta boolean
+
+    | asignaciones y arreglos
+    s Ͱ 5 »                                       | ERROR: int a string
+    arr Ͱ 3 »                                     | ERROR: asignar a todo el arreglo
+    i Ͱ arr + 1 »                                 | ERROR: arreglo sin indice como valor
+    arr ʃ: 0 :ʅ Ͱ 1.5 »                           | ERROR: float a elemento int
+    c++ »                                         | ERROR: ++ solo int o float
+
+    | read y write
+    read є: b :э »                                | ERROR: read no lee boolean
+    read є: s :э »                                | ERROR: read no lee string
+    write є: c :э »                               | ERROR: write no escribe char
+    write є: arr :э »                             | ERROR: arreglo sin indice
+
+    | condiciones
+    if є: i :э ¿:                                 | ERROR: la condicion debe ser boolean
+        i Ͱ 1 »
+    :?
+    while є: f :э ¿:                              | ERROR: la condicion debe ser boolean
+        break »
+    :?
+    for є: val int k Ͱ 0 » ʃ: k :ʅ < ʃ: 3 :ʅ » k Ͱ k + 1.0 :э ¿:   | ERROR: mezcla en la actualizacion
+        i Ͱ k »
+    :?
+:?

@@ -103,6 +103,20 @@ public class Main {
             // (es valido solo si no hay errores lexicos, sintacticos ni semanticos)
             // ========================================================================
             boolean valido = erroresLexicos.isEmpty() && erroresSintacticos.isEmpty() && erroresSemanticos.isEmpty();
+
+            // ==========================================================
+            // codigo intermedio (se armo durante el parse, con las acciones del .cup)
+            // solo se escribe si el programa no tiene ningun error
+            // ==========================================================
+            File archivoCodigo = new File(salida, "codigo_intermedio.txt");
+            if (valido) {
+                escribir(archivoCodigo.getPath(), sintactico.generador::escribir);
+                System.out.println("  - codigo_intermedio.txt");
+            } else {
+                archivoCodigo.delete();   // no dejar el de una corrida anterior
+                System.out.println("  (no se genero codigo_intermedio.txt porque el programa tiene errores)");
+            }
+
             System.out.println("\n==================================================");
             System.out.println(valido
                 ? " Resultado: el programa es valido"

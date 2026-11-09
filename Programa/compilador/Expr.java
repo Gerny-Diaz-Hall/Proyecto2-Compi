@@ -34,7 +34,14 @@ public class Expr {
      * "arr ʃ:0:ʅ"). Las operaciones aritmeticas, logicas y relacionales deben rechazarlo.
      */
     public boolean arregloCompleto = false;
- 
+
+    /* Si es un acceso "arr ʃ: i :ʅ", la expresion del indice (para generar arr[ti]) */
+    public Expr indice;
+
+    /* Si la expresion es un literal, su lexema (ej. "-5"); null en los demas casos.
+       Se usa para validar que la potencia no tenga exponente negativo. */
+    public String valorLiteral;
+
     /* ---- Para la fase de codigo intermedio (se usan mas adelante) ---- */
  
     /* Donde queda el resultado: un temporal (t1), un literal (5) o un nombre */
