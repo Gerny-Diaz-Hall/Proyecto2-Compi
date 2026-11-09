@@ -23,6 +23,12 @@ parser code {:
     // tabla de simbolos semantica: la usan las acciones semanticas y Main lee sus resultados
     public TablaSemantica tabla = new TablaSemantica();
 
+    // generador de codigo intermedio (temporales, etiquetas y el archivo final)
+    public GeneradorCodigo generador = new GeneradorCodigo();
+
+    // chequeo de tipos y codigo de expresiones y estructuras de control (Persona B)
+    public AnalizadorExpresiones expresiones = new AnalizadorExpresiones(tabla, generador);
+
     // metodo para el modo de panico, para los errores de sintaxis se vayan agregando a la lista que se va a mostrar al final
     // y se va siguiendo con el analisis sin freno para recopilar todos los errores
     public void syntax_error(Symbol cur_token) {
@@ -46,6 +52,13 @@ parser code {:
 action code {:
     // atajo para llegar a la tabla de simbolos semantica desde las acciones
     TablaSemantica tabla() { return parser.tabla; }
+
+    // atajos para el chequeo de tipos de expresiones y para el generador de codigo
+    AnalizadorExpresiones expr() { return parser.expresiones; }
+    GeneradorCodigo gen() { return parser.generador; }
+
+    // lista vacia para las alternativas que no generan codigo (errores, return)
+    List<String> vacio() { return new ArrayList<String>(); }
 :};
 
 /*
@@ -74,16 +87,24 @@ terminal String BLOQUE_ABRE, BLOQUE_CIERRA, INDICE_ABRE, INDICE_CIERRA, PAREN_AB
  *   Expr            -> una expresion con su tipo (ver Expr.java)
  *   String          -> el lexema de un literal
  *   InfoDeclaracion -> lo que sigue al nombre en un "val" (escalar o arreglo)
+ *   List<String>    -> codigo intermedio de una sentencia o de un bloque
+ *   Rama            -> un elif (condicion + codigo de su bloque)
+ *   Ciclo           -> etiquetas de un while/for (se crean al leer la palabra)
  * Los que no tienen tipo no devuelven nada.
  */
-non terminal programa, globales, declaracion, principal, bloque, sentencias, sentencia;
-non terminal funciones, funcion, return_stmt, funcion_io;
-non terminal estructura_control, si_condicional, lista_elif, bloque_elif, bloque_else, condicion;
-non terminal ciclo_while, ciclo_for, for_init, for_update, break_stmt;
-non terminal asignacion_var, sentencia_expr;
+non terminal programa, globales, principal;
+non terminal funciones, funcion, return_stmt;
+non terminal List<String> declaracion, bloque, sentencias, sentencia, funcion_io;
+non terminal List<String> estructura_control, si_condicional, bloque_else;
+non terminal List<String> ciclo_while, ciclo_for, for_init, for_update, break_stmt;
+non terminal List<String> asignacion_var, sentencia_expr;
+non terminal Expr condicion;
+non terminal Rama bloque_elif;
+non terminal ArrayList<Rama> lista_elif;
 
 // marcadores para abrir ambitos (ver seccion de bloques y ciclos)
-non terminal abre_bloque, inicio_while, inicio_for;
+non terminal abre_bloque;
+non terminal Ciclo inicio_while, inicio_for;
 
 non terminal Tipo tipo_numerico, tipo_otro, tipo_dato, tipo_retorno;
 non terminal Simbolo parametro;
@@ -109,9 +130,10 @@ programa ::=
     | funciones
     ;
 
+// el codigo de los valores iniciales de las globales va a la seccion "global:" del archivo
 globales ::=
-    globales declaracion
-    | declaracion
+    globales declaracion:codigo     {: gen().agregarGlobal(codigo); :}
+    | declaracion:codigo            {: gen().agregarGlobal(codigo); :}
     // aqui se sincroniza el panico por si hay error que no se frene el analisis
     | globales error FIN_SENT
     // error en la primera declaracion global (todavia no hay "globales" antes)
@@ -123,8 +145,8 @@ globales ::=
 principal ::=
     VOID:inicio PRINCIPAL PAREN_ABRE PAREN_CIERRA
         {: tabla().entrarPrincipal(inicioleft, inicioright); :}
-    bloque
-        {: tabla().salirFuncion(); :}
+    bloque:cuerpo
+        {: gen().agregarFuncion(Tipo.VOID, "principal", cuerpo); tabla().salirFuncion(); :}
     ;
 
 /* ==================================
@@ -135,30 +157,33 @@ principal ::=
  * Todas las alternativas de bloque cierran el ambito, incluso las de error. */
 abre_bloque ::= BLOQUE_ABRE     {: tabla().abrirBloque(); :} ;
 
+// cada bloque devuelve el codigo de todas sus sentencias, en orden
 bloque ::=
-    abre_bloque sentencias BLOQUE_CIERRA            {: tabla().cerrarAmbito(); :}
-    | abre_bloque BLOQUE_CIERRA                     {: tabla().cerrarAmbito(); :}
+    abre_bloque sentencias:codigo BLOQUE_CIERRA     {: tabla().cerrarAmbito(); RESULT = codigo; :}
+    | abre_bloque BLOQUE_CIERRA                     {: tabla().cerrarAmbito(); RESULT = vacio(); :}
     // panico: el :? cierra ESTE bloque, asi el bloque padre conserva el suyo
-    | abre_bloque sentencias error BLOQUE_CIERRA    {: tabla().cerrarAmbito(); :}
-    | abre_bloque error BLOQUE_CIERRA               {: tabla().cerrarAmbito(); :}
+    | abre_bloque sentencias:codigo error BLOQUE_CIERRA {: tabla().cerrarAmbito(); RESULT = codigo; :}
+    | abre_bloque error BLOQUE_CIERRA               {: tabla().cerrarAmbito(); RESULT = vacio(); :}
     ;
 
+// se va juntando el codigo de cada sentencia al final de la lista
 sentencias ::=
-    sentencias sentencia
-    | sentencia
+    sentencias:lista sentencia:codigo   {: if (codigo != null) lista.addAll(codigo); RESULT = lista; :}
+    | sentencia:codigo                  {: RESULT = vacio(); if (codigo != null) RESULT.addAll(codigo); :}
     ;
 
 sentencia ::=
-    declaracion
-    | asignacion_var
-    | sentencia_expr
-    | estructura_control
-    | funcion_io
-    | return_stmt
-    | break_stmt
+    declaracion:codigo              {: RESULT = codigo; :}
+    | asignacion_var:codigo         {: RESULT = codigo; :}
+    | sentencia_expr:codigo         {: RESULT = codigo; :}
+    | estructura_control:codigo     {: RESULT = codigo; :}
+    | funcion_io:codigo             {: RESULT = codigo; :}
+    // el codigo del return lo agrega la Persona A (por ahora no genera instrucciones)
+    | return_stmt                   {: RESULT = vacio(); :}
+    | break_stmt:codigo             {: RESULT = codigo; :}
     // sincronisacion de panico para errores en sentencias
-    | error FIN_SENT
-    | error bloque
+    | error FIN_SENT                {: RESULT = vacio(); :}
+    | error bloque                  {: RESULT = vacio(); :}
     ;
 
 /* ==========================
@@ -178,23 +203,32 @@ tipo_dato ::=
     | tipo_otro:tipo    {: RESULT = tipo; :}
     ;
 
-// los literales devuelven su lexema; la persona B arma el Expr en numero_con_signo y demas
+// los literales devuelven su lexema; donde se usan como valor se convierten en un Expr
+// con expr().literal(...), que les da su tipo y los carga en un temporal (t1 = 5)
 booleano ::= TRUE:lexema {: RESULT = lexema; :} | FALSE:lexema {: RESULT = lexema; :} ;
 entero ::= LITERAL_ENTERO:lexema     {: RESULT = lexema; :} ;
 flotante ::= LITERAL_FLOTANTE:lexema {: RESULT = lexema; :} ;
 caracter ::= LITERAL_CARACTER:lexema {: RESULT = lexema; :} ;
 cadena ::= LITERAL_CADENA:lexema     {: RESULT = lexema; :} ;
 
+// el negativo solo se aplica a literales (lo garantiza la gramatica): se guarda "-5" como lexema
 numero_con_signo ::=
-    RESTA entero | entero | RESTA flotante | flotante ;
+    RESTA:menos entero:lexema   {: RESULT = expr().literal(Tipo.INT, "-" + lexema, menosleft, menosright); :}
+    | entero:lexema             {: RESULT = expr().literal(Tipo.INT, lexema, lexemaleft, lexemaright); :}
+    | RESTA:menos flotante:lexema {: RESULT = expr().literal(Tipo.FLOAT, "-" + lexema, menosleft, menosright); :}
+    | flotante:lexema           {: RESULT = expr().literal(Tipo.FLOAT, lexema, lexemaleft, lexemaright); :}
+    ;
 
 // la declaracion se registra cuando ya se leyo todo (nombre + resto), por eso
-// "val int a Ͱ a »" reporta que 'a' no esta declarada en su propio valor inicial
+// "val int a Ͱ a »" reporta que 'a' no esta declarada en su propio valor inicial.
+// Despues de validarla se genera el codigo de su valor inicial (si tiene).
 declaracion ::=
     VAL tipo_numerico:tipo IDENTIFICADOR:nombre resto_numerico:resto
-        {: tabla().declararVariable(tipo, nombre, nombreleft, nombreright, resto); :}
+        {: tabla().declararVariable(tipo, nombre, nombreleft, nombreright, resto);
+           RESULT = expr().declaracion(nombre, resto); :}
     | VAL tipo_otro:tipo IDENTIFICADOR:nombre resto_escalar:resto
-        {: tabla().declararVariable(tipo, nombre, nombreleft, nombreright, resto); :}
+        {: tabla().declararVariable(tipo, nombre, nombreleft, nombreright, resto);
+           RESULT = expr().declaracion(nombre, resto); :}
     ;
 
 resto_escalar ::=
@@ -219,17 +253,23 @@ lista_valores ::=
     | expr_general:valor                        {: RESULT = new ArrayList<Expr>(); RESULT.add(valor); :}
     ;
 
+// destino Ͱ valor: valida que los tipos coincidan y genera  x = t1  o  arr[t2] = t1
 asignacion_var ::=
-    variable ASIGNACION expr_general FIN_SENT
+    variable:destino ASIGNACION:asignacion expr_general:valor FIN_SENT
+        {: RESULT = expr().asignacion(destino, valor, asignacionleft, asignacionright); :}
     ;
 
+// expresion suelta (ej. x++ » o una llamada): solo se conserva su codigo
 sentencia_expr ::=
-    expr_general FIN_SENT
+    expr_general:expresion FIN_SENT
+        {: RESULT = vacio(); if (expresion != null) RESULT.addAll(expresion.codigo); :}
     ;
 
+// se guarda el indice en el Expr para poder generar arr[ti] al usarlo o asignarlo
 acceso_arreglo ::=
     IDENTIFICADOR:nombre INDICE_ABRE expr_arit:indice INDICE_CIERRA
-        {: RESULT = tabla().usarArreglo(nombre, nombreleft, nombreright, indice); :}
+        {: RESULT = tabla().usarArreglo(nombre, nombreleft, nombreright, indice);
+           RESULT.indice = indice; :}
     ;
 
 variable ::=
@@ -259,12 +299,12 @@ funciones ::= funciones funcion | funcion ;
 funcion ::=
     tipo_retorno:tipo IDENTIFICADOR:nombre PAREN_ABRE parametros:listaParametros PAREN_CIERRA
         {: tabla().entrarFuncion(tipo, nombre, nombreleft, nombreright, listaParametros); :}
-    bloque
-        {: tabla().salirFuncion(); :}
+    bloque:cuerpo
+        {: gen().agregarFuncion(tipo, nombre, cuerpo); tabla().salirFuncion(); :}
     | tipo_retorno:tipo IDENTIFICADOR:nombre PAREN_ABRE PAREN_CIERRA
         {: tabla().entrarFuncion(tipo, nombre, nombreleft, nombreright, new ArrayList<Simbolo>()); :}
-    bloque
-        {: tabla().salirFuncion(); :}
+    bloque:cuerpo
+        {: gen().agregarFuncion(tipo, nombre, cuerpo); tabla().salirFuncion(); :}
     // principal puede ir en cualquier posicion entre las funciones;
     // que haya exactamente uno se valida en la fase semantica
     | principal
@@ -297,143 +337,206 @@ return_stmt ::=
         {: tabla().verificarReturn(true, valor, instruccionleft, instruccionright); :}
     ;
 
+// read: el destino debe ser int, float o char; write: string, int, boolean o float
 funcion_io ::=
-    READ PAREN_ABRE variable PAREN_CIERRA FIN_SENT
-    | WRITE PAREN_ABRE parametro_write PAREN_CIERRA FIN_SENT
+    READ:instruccion PAREN_ABRE variable:destino PAREN_CIERRA FIN_SENT
+        {: RESULT = expr().leer(destino, instruccionleft, instruccionright); :}
+    | WRITE:instruccion PAREN_ABRE parametro_write:valor PAREN_CIERRA FIN_SENT
+        {: RESULT = expr().escribir(valor, instruccionleft, instruccionright); :}
     ;
 
 parametro_write ::=
-    variable:usoVariable    {: RESULT = usoVariable; :}
-    | numero_con_signo | booleano | caracter | cadena ;
+    variable:usoVariable        {: RESULT = expr().cargar(usoVariable); :}
+    | numero_con_signo:numero   {: RESULT = numero; :}
+    | booleano:lexema           {: RESULT = expr().literal(Tipo.BOOLEAN, lexema, lexemaleft, lexemaright); :}
+    | caracter:lexema           {: RESULT = expr().literal(Tipo.CHAR, lexema, lexemaleft, lexemaright); :}
+    | cadena:lexema             {: RESULT = expr().literal(Tipo.STRING, lexema, lexemaleft, lexemaright); :}
+    ;
 
 /* =========================================================================
  * estructuras de control
- * ========================================================================= */
-estructura_control ::= si_condicional | ciclo_while | ciclo_for ;
+ * =========================================================================
+ * Cada estructura devuelve su codigo completo (lista de instrucciones) con sus
+ * etiquetas y saltos. Las condiciones se validan como boolean en "condicion". */
+estructura_control ::=
+    si_condicional:codigo   {: RESULT = codigo; :}
+    | ciclo_while:codigo    {: RESULT = codigo; :}
+    | ciclo_for:codigo      {: RESULT = codigo; :}
+    ;
 
 // condicion de if/elif/while; si tiene error, el panico se queda dentro de los parentesis
 condicion ::=
-    PAREN_ABRE expr_booleana PAREN_CIERRA
-    | PAREN_ABRE error PAREN_CIERRA
+    PAREN_ABRE:parentesis expr_booleana:expresion PAREN_CIERRA
+        {: RESULT = expr().condicion(expresion, parentesisleft, parentesisright); :}
+    | PAREN_ABRE:parentesis error PAREN_CIERRA
+        {: RESULT = Expr.error(parentesisleft, parentesisright); :}
     ;
 
+// los elif se juntan en una lista de Rama; el codigo de todas las ramas se arma al final
 si_condicional ::=
-    IF condicion bloque
-    | IF condicion bloque bloque_else
-    | IF condicion bloque lista_elif
-    | IF condicion bloque lista_elif bloque_else
+    IF condicion:si bloque:cuerpo
+        {: RESULT = expr().si(si, cuerpo, new ArrayList<Rama>(), null); :}
+    | IF condicion:si bloque:cuerpo bloque_else:sino
+        {: RESULT = expr().si(si, cuerpo, new ArrayList<Rama>(), sino); :}
+    | IF condicion:si bloque:cuerpo lista_elif:elifs
+        {: RESULT = expr().si(si, cuerpo, elifs, null); :}
+    | IF condicion:si bloque:cuerpo lista_elif:elifs bloque_else:sino
+        {: RESULT = expr().si(si, cuerpo, elifs, sino); :}
     ;
 
-lista_elif ::= lista_elif bloque_elif | bloque_elif ;
-bloque_elif ::= ELIF condicion bloque ;
-bloque_else ::= ELSE bloque ;
+lista_elif ::=
+    lista_elif:lista bloque_elif:rama   {: lista.add(rama); RESULT = lista; :}
+    | bloque_elif:rama                  {: RESULT = new ArrayList<Rama>(); RESULT.add(rama); :}
+    ;
+bloque_elif ::= ELIF condicion:si bloque:cuerpo {: RESULT = new Rama(si, cuerpo); :} ;
+bloque_else ::= ELSE bloque:cuerpo              {: RESULT = cuerpo; :} ;
 
 // inicio_while e inicio_for marcan que se entro a un ciclo (para validar break).
 // El for ademas abre un ambito propio para la variable de control.
-inicio_while ::= WHILE      {: tabla().entrarCiclo(); :} ;
-inicio_for ::= FOR          {: tabla().abrirFor(); tabla().entrarCiclo(); :} ;
+// Tambien crean las etiquetas del ciclo ANTES del cuerpo, para que un break sepa a donde saltar.
+inicio_while ::= WHILE      {: tabla().entrarCiclo(); RESULT = gen().abrirCiclo(); :} ;
+inicio_for ::= FOR          {: tabla().abrirFor(); tabla().entrarCiclo(); RESULT = gen().abrirCiclo(); :} ;
 
 ciclo_while ::=
-    inicio_while condicion bloque   {: tabla().salirCiclo(); :}
+    inicio_while:ciclo condicion:si bloque:cuerpo
+        {: tabla().salirCiclo(); RESULT = expr().mientras(ciclo, si, cuerpo); :}
     ;
 
 ciclo_for ::=
-    inicio_for PAREN_ABRE for_init FIN_SENT expr_booleana FIN_SENT for_update PAREN_CIERRA bloque
-        {: tabla().salirCiclo(); tabla().cerrarAmbito(); :}
+    inicio_for:ciclo PAREN_ABRE for_init:inicio FIN_SENT:fin expr_booleana:si FIN_SENT for_update:actualizacion PAREN_CIERRA bloque:cuerpo
+        {: tabla().salirCiclo(); tabla().cerrarAmbito();
+           RESULT = expr().para(ciclo, inicio, expr().condicion(si, finleft, finright), actualizacion, cuerpo); :}
     | inicio_for PAREN_ABRE error PAREN_CIERRA bloque
-        {: tabla().salirCiclo(); tabla().cerrarAmbito(); :}
+        {: tabla().salirCiclo(); tabla().cerrarAmbito(); gen().cerrarCiclo(); RESULT = vacio(); :}
     ;
 
 for_init ::=
     VAL tipo_dato:tipo IDENTIFICADOR:nombre ASIGNACION:asignacion expr_general:valor
-        {: tabla().declararVariable(tipo, nombre, nombreleft, nombreright,
-                                    InfoDeclaracion.escalar(valor, asignacionleft, asignacionright)); :}
-    | variable ASIGNACION expr_general
+        {: InfoDeclaracion info = InfoDeclaracion.escalar(valor, asignacionleft, asignacionright);
+           tabla().declararVariable(tipo, nombre, nombreleft, nombreright, info);
+           RESULT = expr().declaracion(nombre, info); :}
+    | variable:destino ASIGNACION:asignacion expr_general:valor
+        {: RESULT = expr().asignacion(destino, valor, asignacionleft, asignacionright); :}
     ;
 
 for_update ::=
-    variable ASIGNACION expr_general
-    | IDENTIFICADOR INC
-    | IDENTIFICADOR DEC
+    variable:destino ASIGNACION:asignacion expr_general:valor
+        {: RESULT = expr().asignacion(destino, valor, asignacionleft, asignacionright); :}
+    | IDENTIFICADOR:nombre INC:operador
+        {: RESULT = expr().incremento(nombre, operador, nombreleft, nombreright).codigo; :}
+    | IDENTIFICADOR:nombre DEC:operador
+        {: RESULT = expr().incremento(nombre, operador, nombreleft, nombreright).codigo; :}
     ;
 
 break_stmt ::=
     BREAK:instruccion FIN_SENT
         {: if (!tabla().dentroDeCiclo())
-               tabla().error(instruccionleft, instruccionright, "break solo puede usarse dentro de un while o un for"); :}
+               tabla().error(instruccionleft, instruccionright, "break solo puede usarse dentro de un while o un for");
+           RESULT = expr().romper(); :}
     ;
 
+
 /* =========================================================================
+ *PARTE B
  * generales, relacionales y logicas
  * =========================================================================
  * Las alternativas de un solo hijo solo pasan el Expr hacia arriba (RESULT = expresion).
- * Las que tienen operadores las completa la persona B con el chequeo de tipos. */
+ * Las que tienen operadores validan los tipos y generan el codigo con expr(). */
 expr_general ::=
     expr_grupo:expresion    {: RESULT = expresion; :}
-    | cadena | caracter ;
+    | cadena:lexema         {: RESULT = expr().literal(Tipo.STRING, lexema, lexemaleft, lexemaright); :}
+    | caracter:lexema       {: RESULT = expr().literal(Tipo.CHAR, lexema, lexemaleft, lexemaright); :}
+    ;
 expr_grupo ::=
     expr_arit:expresion         {: RESULT = expresion; :}
     | expr_logica:expresion     {: RESULT = expresion; :}
     | expr_relacional:expresion {: RESULT = expresion; :}
-    | booleano ;
+    | booleano:lexema           {: RESULT = expr().literal(Tipo.BOOLEAN, lexema, lexemaleft, lexemaright); :}
+    ;
 expr_booleana ::=
     expr_logica:expresion       {: RESULT = expresion; :}
     | expr_relacional:expresion {: RESULT = expresion; :}
-    | booleano
-    | valor:expresion           {: RESULT = expresion; :}
+    | booleano:lexema           {: RESULT = expr().literal(Tipo.BOOLEAN, lexema, lexemaleft, lexemaright); :}
+    | valor:expresion           {: RESULT = expr().cargar(expresion); :}
     ;
 
-op_rel ::= MENOR | MENOR_IG | MAYOR | MAYOR_IG | IGUAL | DIFERENTE ;
+// cada operador devuelve su lexema para usarlo en el mensaje y en el codigo (t3 = t1 < t2)
+op_rel ::=
+    MENOR:operador          {: RESULT = operador; :}
+    | MENOR_IG:operador     {: RESULT = operador; :}
+    | MAYOR:operador        {: RESULT = operador; :}
+    | MAYOR_IG:operador     {: RESULT = operador; :}
+    | IGUAL:operador        {: RESULT = operador; :}
+    | DIFERENTE:operador    {: RESULT = operador; :}
+    ;
 
 expr_relacional ::=
-    INDICE_ABRE expr_comparable INDICE_CIERRA op_rel INDICE_ABRE expr_comparable INDICE_CIERRA
+    INDICE_ABRE expr_comparable:izquierda INDICE_CIERRA op_rel:operador INDICE_ABRE expr_comparable:derecha INDICE_CIERRA
+        {: RESULT = expr().relacional(operador, izquierda, derecha, operadorleft, operadorright); :}
     ;
 
 expr_comparable ::=
     expr_arit:expresion         {: RESULT = expresion; :}
-    | booleano | caracter
+    | booleano:lexema           {: RESULT = expr().literal(Tipo.BOOLEAN, lexema, lexemaleft, lexemaright); :}
+    | caracter:lexema           {: RESULT = expr().literal(Tipo.CHAR, lexema, lexemaleft, lexemaright); :}
     | expr_relacional:expresion {: RESULT = expresion; :}
     | expr_logica:expresion     {: RESULT = expresion; :}
     ;
 
 grupo ::= PAREN_ABRE expr_grupo:expresion PAREN_CIERRA     {: RESULT = expresion; :} ;
 
+// en el codigo intermedio el and se escribe &&, el or || y la negacion !
 expr_logica ::=
-    grupo AND grupo
-    | grupo OR grupo
-    | NOT grupo
+    grupo:izquierda AND:operador grupo:derecha
+        {: RESULT = expr().logica("&&", operador, izquierda, derecha, operadorleft, operadorright); :}
+    | grupo:izquierda OR:operador grupo:derecha
+        {: RESULT = expr().logica("||", operador, izquierda, derecha, operadorleft, operadorright); :}
+    | NOT:operador grupo:operando
+        {: RESULT = expr().negacion(operador, operando, operadorleft, operadorright); :}
     ;
 
 /* ==========================
  * aritmeticas y precedencia
- * ==========================*/
+ * ==========================
+ * Todas las binarias usan expr().aritmetica, que valida los tipos segun el operador
+ * y genera  t3 = t1 op t2. */
 expr_arit ::=
-    expr_arit SUMA termino
-    | expr_arit RESTA termino
+    expr_arit:izquierda SUMA:operador termino:derecha
+        {: RESULT = expr().aritmetica(operador, izquierda, derecha, operadorleft, operadorright); :}
+    | expr_arit:izquierda RESTA:operador termino:derecha
+        {: RESULT = expr().aritmetica(operador, izquierda, derecha, operadorleft, operadorright); :}
     | termino:expresion         {: RESULT = expresion; :}
     ;
 
 termino ::=
-    termino MULT residuo
-    | termino DIV residuo
-    | termino DIV_ENT residuo
+    termino:izquierda MULT:operador residuo:derecha
+        {: RESULT = expr().aritmetica(operador, izquierda, derecha, operadorleft, operadorright); :}
+    | termino:izquierda DIV:operador residuo:derecha
+        {: RESULT = expr().aritmetica(operador, izquierda, derecha, operadorleft, operadorright); :}
+    | termino:izquierda DIV_ENT:operador residuo:derecha
+        {: RESULT = expr().aritmetica(operador, izquierda, derecha, operadorleft, operadorright); :}
     | residuo:expresion         {: RESULT = expresion; :}
     ;
 
 residuo ::=
-    residuo MOD factor
+    residuo:izquierda MOD:operador factor:derecha
+        {: RESULT = expr().aritmetica(operador, izquierda, derecha, operadorleft, operadorright); :}
     | factor:expresion          {: RESULT = expresion; :}
     ;
 
 factor ::=
-    base POT factor
+    base:izquierda POT:operador factor:derecha
+        {: RESULT = expr().aritmetica(operador, izquierda, derecha, operadorleft, operadorright); :}
     | base:expresion            {: RESULT = expresion; :}
     ;
 
+// valor = variable, elemento de arreglo o llamada: se carga en un temporal (t1 = x)
 base ::=
     grupo:expresion             {: RESULT = expresion; :}
     | numero_con_signo:expresion {: RESULT = expresion; :}
-    | IDENTIFICADOR INC
-    | IDENTIFICADOR DEC
-    | valor:expresion           {: RESULT = expresion; :}
+    | IDENTIFICADOR:nombre INC:operador
+        {: RESULT = expr().incremento(nombre, operador, nombreleft, nombreright); :}
+    | IDENTIFICADOR:nombre DEC:operador
+        {: RESULT = expr().incremento(nombre, operador, nombreleft, nombreright); :}
+    | valor:expresion           {: RESULT = expr().cargar(expresion); :}
     ;
