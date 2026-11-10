@@ -1,0 +1,57 @@
+| ===== PRUEBA SEMANTICA - PERSONA B (VALIDA): tipos de expresiones, asignaciones y control =====
+| Este programa NO debe tener errores y debe generar codigo_intermedio.txt
+val int contador Ͱ 10 »
+val float notas ʃ:3:ʅ Ͱ ¿: 1.5, 2.5, 3.5 :? »
+
+void principal є: :э ¿:
+    | aritmeticas con precedencia (int y float por separado)
+    val int a Ͱ 2 + 3 * 4 »
+    val int b Ͱ a // 2 % 3 »
+    val int c Ͱ 2 ^ 3 »
+    val float f Ͱ -1.5 + 2.0 * 3.0 »
+    val float g Ͱ f / 2.0 »
+    val int d Ͱ є: a + b :э * c »
+
+    | relacionales y logicas
+    val boolean mayor Ͱ ʃ: a :ʅ > ʃ: b :ʅ »
+    val boolean igualChar Ͱ ʃ: 'x' :ʅ == ʃ: 'y' :ʅ »
+    val boolean ambos Ͱ є: ʃ: a :ʅ < ʃ: 10 :ʅ :э λ є: mayor :э »
+    val boolean alguno Ͱ є: ambos :э θ є: false :э »
+    val boolean ninguno Ͱ Σ є: alguno :э »
+
+    | asignaciones, arreglos, ++ y --
+    a Ͱ a + 1 »
+    notas ʃ: 0 :ʅ Ͱ notas ʃ: 1 :ʅ + g »
+    a++ »
+    contador-- »
+
+    | read y write
+    read є: a :э »
+    write є: "Hola" :э »
+    write є: notas ʃ: 2 :ʅ :э »
+    write є: -5 :э »
+
+    | if / elif / else
+    if є: ʃ: a :ʅ > ʃ: 5 :ʅ :э ¿:
+        write є: a :э »
+    :?
+    elif є: ʃ: a :ʅ == ʃ: 5 :ʅ :э ¿:
+        write є: "es cinco" :э »
+    :?
+    else ¿:
+        write є: false :э »
+    :?
+
+    | while con break
+    while є: ʃ: a :ʅ < ʃ: 100 :ʅ :э ¿:
+        a Ͱ a * 2 »
+        if є: ʃ: a :ʅ == ʃ: 64 :ʅ :э ¿:
+            break »
+        :?
+    :?
+
+    | for
+    for є: val int i Ͱ 0 » ʃ: i :ʅ < ʃ: 3 :ʅ » i++ :э ¿:
+        notas ʃ: i :ʅ Ͱ 0.0 »
+    :?
+:?
