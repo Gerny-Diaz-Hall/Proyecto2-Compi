@@ -1,0 +1,36 @@
+| ===== PRUEBA CODIGO INTERMEDIO - PERSONA A (VALIDA): funciones, llamadas y return =====
+| Este programa NO debe tener errores y debe generar codigo_intermedio.txt
+val int total Ͱ 0 »
+
+int suma є: int a, int b :э ¿:
+    return a + b »
+:?
+
+| recursion: la funcion se llama a si misma
+int factorial є: int n :э ¿:
+    if є: ʃ: n :ʅ <= ʃ: 1 :ʅ :э ¿:
+        return 1 »
+    :?
+    return n * factorial є: n - 1 :э »
+:?
+
+float mitad є: float x :э ¿:
+    return x / 2.0 »
+:?
+
+boolean esPar є: int n :э ¿:
+    return ʃ: n % 2 :ʅ == ʃ: 0 :ʅ »
+:?
+
+void principal є: :э ¿:
+    val int r Ͱ suma є: 3, 4 :э »
+    | llamada dentro de un argumento de otra llamada
+    total Ͱ suma є: suma є: 1, 2 :э, factorial є: 5 :э :э »
+    val float m Ͱ mitad є: 9.0 :э »
+    if є: esPar є: r :э :э ¿:
+        write є: r :э »
+    :?
+    | llamada como sentencia (se ignora el resultado)
+    factorial є: 3 :э »
+    return »
+:?

@@ -48,6 +48,12 @@ public class TablaSemantica {
  
     /* Contexto para validar return y break */
     private Simbolo funcionActual = null;
+
+    /* Generador de codigo intermedio (temporales para el resultado de las llamadas) */
+    private GeneradorCodigo generador = null;
+
+    /* usarGenerador - Lo llama el parser al crearse, para compartir el mismo generador */
+    public void usarGenerador(GeneradorCodigo generador) { this.generador = generador; }
     private int profundidadCiclos = 0;
  
     /* true si la funcion actual ya tuvo al menos un return (con o sin valor);
@@ -262,6 +268,24 @@ public class TablaSemantica {
             error(linea, columna, "tipo de retorno incorrecto en '" + funcionActual.nombre + "': se esperaba "
                     + funcionActual.tipo + " pero se encontro " + valor.tipo);
     }
+
+    /*
+     * codigoReturn - Codigo intermedio de un return.
+     *                (produccion: return_stmt, despues de verificarReturn)
+     * ENTRADA : el valor retornado (null si es "return »").
+     * SALIDA  : - con valor: el codigo del valor y   return t1
+     *           - sin valor:                         return
+     */
+    public List<String> codigoReturn(Expr valor) {
+        List<String> codigo = new ArrayList<>();
+        if (valor == null) {
+            codigo.add("return");
+        } else {
+            codigo.addAll(valor.codigo);
+            codigo.add("return " + (valor.dir == null ? "?" : valor.dir));
+        }
+        return codigo;
+    }
  
     /*
      * declararVariable - Registra una declaracion "val tipo nombre ...".
@@ -348,6 +372,11 @@ public class TablaSemantica {
      *           la cantidad de argumentos debe coincidir y cada uno debe ser del tipo
      *           de su parametro.
      * SALIDA  : Expr con el tipo de retorno de la funcion; ERROR si no existe.
+     *           Ademas genera su codigo intermedio:
+     *               <codigo de cada argumento>
+     *               param t1
+     *               param t2
+     *               t3 = call nombre, 2     (si es void: solo  call nombre, 2)
      */
     public Expr llamarFuncion(String nombre, int linea, int columna, List<Expr> argumentos) {
         Simbolo funcion = buscar(nombre);
@@ -372,7 +401,31 @@ public class TablaSemantica {
                             + " pero es " + argumento.tipo);
             }
         }
-        return new Expr(funcion.tipo, linea, columna);
+        return codigoLlamada(funcion, linea, columna, argumentos);
+    }
+
+    /*
+     * codigoLlamada - Arma el codigo intermedio de una llamada ya validada.
+     * ENTRADA : la funcion llamada, la posicion y los argumentos (cada uno con su codigo).
+     * SALIDA  : Expr del tipo de retorno; si no es void, el resultado queda en un temporal.
+     * NOTA    : primero se calculan TODOS los argumentos y despues se hacen los param
+     *           seguidos, asi una llamada dentro de un argumento no mezcla sus param.
+     */
+    private Expr codigoLlamada(Simbolo funcion, int linea, int columna, List<Expr> argumentos) {
+        Expr resultado = new Expr(funcion.tipo, linea, columna);
+        if (generador == null) return resultado;
+        for (Expr argumento : argumentos)
+            if (argumento != null) resultado.codigo.addAll(argumento.codigo);
+        for (Expr argumento : argumentos)
+            resultado.codigo.add("param " + (argumento == null || argumento.dir == null ? "?" : argumento.dir));
+        String llamada = "call " + funcion.nombre + ", " + argumentos.size();
+        if (funcion.tipo == Tipo.VOID) {
+            resultado.codigo.add(llamada);
+        } else {
+            resultado.dir = generador.nuevoTemporal();
+            resultado.codigo.add(resultado.dir + " = " + llamada);
+        }
+        return resultado;
     }
  
     /* Posicion de una expresion, o la de respaldo si la expresion no la tiene */

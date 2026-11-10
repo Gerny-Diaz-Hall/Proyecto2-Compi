@@ -688,6 +688,9 @@ public class parser extends java_cup.runtime.lr_parser {
     // chequeo de tipos y codigo de expresiones y estructuras de control (Persona B)
     public AnalizadorExpresiones expresiones = new AnalizadorExpresiones(tabla, generador);
 
+    // la tabla usa el mismo generador para el codigo de las llamadas (param / call)
+    { tabla.usarGenerador(generador); }
+
     // metodo para el modo de panico, para los errores de sintaxis se vayan agregando a la lista que se va a mostrar al final
     // y se va siguiendo con el analisis sin freno para recopilar todos los errores
     public void syntax_error(Symbol cur_token) {
@@ -985,7 +988,10 @@ class CUP$parser$actions {
           case 21: // sentencia ::= return_stmt 
             {
               List<String> RESULT =null;
-		 RESULT = vacio(); 
+		int codigoleft = ((java_cup.runtime.Symbol)CUP$parser$stack.peek()).left;
+		int codigoright = ((java_cup.runtime.Symbol)CUP$parser$stack.peek()).right;
+		List<String> codigo = (List<String>)((java_cup.runtime.Symbol) CUP$parser$stack.peek()).value;
+		 RESULT = codigo; 
               CUP$parser$result = parser.getSymbolFactory().newSymbol("sentencia",9, ((java_cup.runtime.Symbol)CUP$parser$stack.peek()), ((java_cup.runtime.Symbol)CUP$parser$stack.peek()), RESULT);
             }
           return CUP$parser$result;
@@ -1660,11 +1666,12 @@ class CUP$parser$actions {
           /*. . . . . . . . . . . . . . . . . . . .*/
           case 75: // return_stmt ::= RETURN FIN_SENT 
             {
-              Object RESULT =null;
+              List<String> RESULT =null;
 		int instruccionleft = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-1)).left;
 		int instruccionright = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-1)).right;
 		String instruccion = (String)((java_cup.runtime.Symbol) CUP$parser$stack.elementAt(CUP$parser$top-1)).value;
-		 tabla().verificarReturn(false, null, instruccionleft, instruccionright); 
+		 tabla().verificarReturn(false, null, instruccionleft, instruccionright);
+           RESULT = tabla().codigoReturn(null); 
               CUP$parser$result = parser.getSymbolFactory().newSymbol("return_stmt",5, ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-1)), ((java_cup.runtime.Symbol)CUP$parser$stack.peek()), RESULT);
             }
           return CUP$parser$result;
@@ -1672,14 +1679,15 @@ class CUP$parser$actions {
           /*. . . . . . . . . . . . . . . . . . . .*/
           case 76: // return_stmt ::= RETURN expr_general FIN_SENT 
             {
-              Object RESULT =null;
+              List<String> RESULT =null;
 		int instruccionleft = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-2)).left;
 		int instruccionright = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-2)).right;
 		String instruccion = (String)((java_cup.runtime.Symbol) CUP$parser$stack.elementAt(CUP$parser$top-2)).value;
 		int valorleft = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-1)).left;
 		int valorright = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-1)).right;
 		Expr valor = (Expr)((java_cup.runtime.Symbol) CUP$parser$stack.elementAt(CUP$parser$top-1)).value;
-		 tabla().verificarReturn(true, valor, instruccionleft, instruccionright); 
+		 tabla().verificarReturn(true, valor, instruccionleft, instruccionright);
+           RESULT = tabla().codigoReturn(valor); 
               CUP$parser$result = parser.getSymbolFactory().newSymbol("return_stmt",5, ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-2)), ((java_cup.runtime.Symbol)CUP$parser$stack.peek()), RESULT);
             }
           return CUP$parser$result;

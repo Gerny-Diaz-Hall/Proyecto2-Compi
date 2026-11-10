@@ -29,6 +29,9 @@ parser code {:
     // chequeo de tipos y codigo de expresiones y estructuras de control (Persona B)
     public AnalizadorExpresiones expresiones = new AnalizadorExpresiones(tabla, generador);
 
+    // la tabla usa el mismo generador para el codigo de las llamadas (param / call)
+    { tabla.usarGenerador(generador); }
+
     // metodo para el modo de panico, para los errores de sintaxis se vayan agregando a la lista que se va a mostrar al final
     // y se va siguiendo con el analisis sin freno para recopilar todos los errores
     public void syntax_error(Symbol cur_token) {
@@ -93,7 +96,8 @@ terminal String BLOQUE_ABRE, BLOQUE_CIERRA, INDICE_ABRE, INDICE_CIERRA, PAREN_AB
  * Los que no tienen tipo no devuelven nada.
  */
 non terminal programa, globales, principal;
-non terminal funciones, funcion, return_stmt;
+non terminal funciones, funcion;
+non terminal List<String> return_stmt;
 non terminal List<String> declaracion, bloque, sentencias, sentencia, funcion_io;
 non terminal List<String> estructura_control, si_condicional, bloque_else;
 non terminal List<String> ciclo_while, ciclo_for, for_init, for_update, break_stmt;
@@ -178,8 +182,7 @@ sentencia ::=
     | sentencia_expr:codigo         {: RESULT = codigo; :}
     | estructura_control:codigo     {: RESULT = codigo; :}
     | funcion_io:codigo             {: RESULT = codigo; :}
-    // el codigo del return lo agrega la Persona A (por ahora no genera instrucciones)
-    | return_stmt                   {: RESULT = vacio(); :}
+    | return_stmt:codigo            {: RESULT = codigo; :}
     | break_stmt:codigo             {: RESULT = codigo; :}
     // sincronisacion de panico para errores en sentencias
     | error FIN_SENT                {: RESULT = vacio(); :}
@@ -332,9 +335,11 @@ parametro ::=
 
 return_stmt ::=
     RETURN:instruccion FIN_SENT
-        {: tabla().verificarReturn(false, null, instruccionleft, instruccionright); :}
+        {: tabla().verificarReturn(false, null, instruccionleft, instruccionright);
+           RESULT = tabla().codigoReturn(null); :}
     | RETURN:instruccion expr_general:valor FIN_SENT
-        {: tabla().verificarReturn(true, valor, instruccionleft, instruccionright); :}
+        {: tabla().verificarReturn(true, valor, instruccionleft, instruccionright);
+           RESULT = tabla().codigoReturn(valor); :}
     ;
 
 // read: el destino debe ser int, float o char; write: string, int, boolean o float
